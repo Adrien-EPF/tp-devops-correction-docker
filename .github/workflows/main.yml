@@ -28,12 +28,11 @@ jobs:
       - name: Build and test with Maven
         run: mvn clean verify --file ./simple-api/pom.xml
 
-      # Nouvelle étape : Analyse SonarCloud (séparée pour plus de clarté)
+      # Nouvelle étape : Analyse SonarCloud
       - name: SonarCloud Quality Gate Check
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          mvn sonar:sonar -Dsonar.projectKey=VOTRE_PROJECT_KEY -Dsonar.organization=VOTRE_ORGANIZATION Dsonar.host.url=https://sonarcloud.io -Dsonar.login=${SONAR_TOKEN} --file ./simple-api/pom.xml
+        run: mvn sonar:sonar -Dsonar.projectKey=VOTRE_PROJECT_KEY -Dsonar.organization=VOTRE_ORGANIZATION -Dsonar.host.url=https://sonarcloud.io -Dsonar.login=${SONAR_TOKEN} --file ./simple-api/pom.xml
 
   # define job to build and publish docker image
   build-and-push-docker-image:
