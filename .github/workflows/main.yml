@@ -1,15 +1,12 @@
-# Script Python pour générer le fichier de configuration GitHub Actions main.yml
-# Ce fichier automatise le test, l'analyse de qualité (Sonar) et le déploiement Docker.
-
-workflow_content = """name: CI devops 2025
+name: CI devops 2025
 
 on:
-  # Déclenchement sur les branches main et develop
+  # to begin you want to launch this job in main and develop
   push:
     branches:
       - main
       - develop
-  # Déclenchement sur les Pull Requests
+
   pull_request:
 
 jobs:
@@ -17,66 +14,55 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      # Récupération du code source
+      # checkout your github code using actions/checkout@v4
       - uses: actions/checkout@v4
 
-      # Configuration du JDK 21 (Corretto)
+      # do the same with another action (actions/setup-java@v4) that enable to setup jdk 21
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'corretto'
           java-version: '21'
 
-      # Build, Test et Analyse SonarCloud
-      # Note : Remplacez YOUR_PROJECT_KEY et YOUR_ORGANIZATION par vos valeurs SonarCloud
-      - name: Build, test and analyze with Maven
-        run: |
-          mvn -B verify sonar:sonar \\
-            -Dsonar.projectKey=YOUR_PROJECT_KEY \\
-            -Dsonar.organization=YOUR_ORGANIZATION_NAME \\
-            -Dsonar.host.url=https://sonarcloud.io \\
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }} \\
-            --file ./simple-api/pom.xml
+      # finally build your app with the latest command
+      - name: Build and test with Maven
+        run: mvn clean verify --file ./simple-api/pom.xml
 
+  # define job to build and publish docker image
   build-and-push-docker-image:
-    # Ce job ne s'exécute que si les tests et l'analyse Sonar réussissent
     needs: test-backend
+    # run only when code is compiling and tests are passing
     runs-on: ubuntu-24.04
 
+    # steps to perform in job
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Connexion au Docker Hub via les secrets GitHub
       - name: Login to DockerHub
         run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
 
-      # Construction et Push de l'image Backend
+
       - name: Build image and push backend
         uses: docker/build-push-action@v6
         with:
+          # relative path to the place where source code with Dockerfile is located
           context: ./simple-api
+          # Note: tags has to be all lower-case
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-simple-api:latest
-          # Push uniquement si nous sommes sur la branche main
-          push: ${{ github.ref == 'refs/heads/main' }}
 
-      # Construction et Push de l'image Database
       - name: Build image and push database
         uses: docker/build-push-action@v6
         with:
+          # relative path to the database Dockerfile
           context: ./database
+          # Note: tags has to be all lower-case
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-database:latest
-          push: ${{ github.ref == 'refs/heads/main' }}
 
-      # Construction et Push de l'image HTTP Server
       - name: Build image and push httpd
         uses: docker/build-push-action@v6
         with:
+          # relative path to the http server Dockerfile
           context: ./http-server
+          # Note: tags has to be all lower-case
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-httpd:latest
-          push: ${{ github.ref == 'refs/heads/main' }}
-"""
-
-# Sauvegarde du contenu dans le fichier main.yml
-with open("main.yml", "w", encoding="utf-8") as f:
-    f.write(workflow_content)
