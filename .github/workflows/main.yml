@@ -1,76 +1,82 @@
-name: CI/CD Pipeline
+# Script Python pour générer le fichier de configuration GitHub Actions main.yml
+# Ce fichier automatise le test, l'analyse de qualité (Sonar) et le déploiement Docker.
+
+workflow_content = """name: CI devops 2025
 
 on:
+  # Déclenchement sur les branches main et develop
   push:
-    branches: [ main, master ]
+    branches:
+      - main
+      - develop
+  # Déclenchement sur les Pull Requests
   pull_request:
-    branches: [ main, master ]
 
 jobs:
-  # ============================================
-  # JOB 1 : TESTS BACKEND + SONARCLOUD
-  # ============================================
   test-backend:
     runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
 
+    steps:
+      # Récupération du code source
+      - uses: actions/checkout@v4
+
+      # Configuration du JDK 21 (Corretto)
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'corretto'
           java-version: '21'
 
-      - name: Build and test with Maven
-        run: mvn clean verify --file ./simple-api/pom.xml
+      # Build, Test et Analyse SonarCloud
+      # Note : Remplacez YOUR_PROJECT_KEY et YOUR_ORGANIZATION par vos valeurs SonarCloud
+      - name: Build, test and analyze with Maven
+        run: |
+          mvn -B verify sonar:sonar \\
+            -Dsonar.projectKey=YOUR_PROJECT_KEY \\
+            -Dsonar.organization=YOUR_ORGANIZATION_NAME \\
+            -Dsonar.host.url=https://sonarcloud.io \\
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }} \\
+            --file ./simple-api/pom.xml
 
-      - name: SonarCloud Quality Gate Check
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn sonar:sonar -Dsonar.projectKey=adrien-epf -Dsonar.organization=Adrien-EPF -Dsonar.host.url=https://sonarcloud.io -Dsonar.login=${SONAR_TOKEN} --file ./simple-api/pom.xml
-
-  # ============================================
-  # JOB 2 : BUILD ET PUSH IMAGE DOCKER BACKEND
-  # ============================================
-  build-and-push-backend:
+  build-and-push-docker-image:
+    # Ce job ne s'exécute que si les tests et l'analyse Sonar réussissent
     needs: test-backend
     runs-on: ubuntu-24.04
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      # Connexion au Docker Hub via les secrets GitHub
+      - name: Login to DockerHub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
 
-      - name: Build and push backend image
-        uses: docker/build-push-action@v5
+      # Construction et Push de l'image Backend
+      - name: Build image and push backend
+        uses: docker/build-push-action@v6
         with:
           context: ./simple-api
-          push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-simple-api:latest
+          # Push uniquement si nous sommes sur la branche main
+          push: ${{ github.ref == 'refs/heads/main' }}
 
-  # ============================================
-  # JOB 3 : BUILD ET PUSH IMAGE DOCKER DATABASE
-  # ============================================
-  build-and-push-database:
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push database image
-        uses: docker/build-push-action@v5
+      # Construction et Push de l'image Database
+      - name: Build image and push database
+        uses: docker/build-push-action@v6
         with:
           context: ./database
-          push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-database:latest
+          push: ${{ github.ref == 'refs/heads/main' }}
+
+      # Construction et Push de l'image HTTP Server
+      - name: Build image and push httpd
+        uses: docker/build-push-action@v6
+        with:
+          context: ./http-server
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-httpd:latest
+          push: ${{ github.ref == 'refs/heads/main' }}
+"""
+
+# Sauvegarde du contenu dans le fichier main.yml
+with open("main.yml", "w", encoding="utf-8") as f:
+    f.write(workflow_content)
