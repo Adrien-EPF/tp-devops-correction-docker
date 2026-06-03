@@ -10,3 +10,4 @@
     name: front-network
     driver: bridge
     state: present
+

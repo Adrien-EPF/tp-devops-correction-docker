@@ -2,6 +2,7 @@ services:
 
   database:
     build: "database"
+    name: my-db
     environment:
       - POSTGRES_PASSWORD=pwd
     volumes:
