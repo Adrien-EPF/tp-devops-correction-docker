@@ -1,0 +1,17 @@
+
+- name: Launch application container
+  docker_container:
+    name: app
+    image: greenway13/tp-devops-simple-api:latest   # <-- adaptez
+    networks:
+      - name: private-network
+      - name: front-network
+    volumes:
+      - /opt/application.yml:/config/application.yml:ro
+    ports:
+      - "8080:8080"
+    restart_policy: always
+    env:
+      SPRING_CONFIG_LOCATION: /config/application.yml
+  vars:
+    ansible_python_interpreter: /opt/docker_venv/bin/python

@@ -1,0 +1,23 @@
+ServerRoot "/usr/local/apache2"
+Listen 80
+LoadModule proxy_module modules/mod_proxy.so
+LoadModule proxy_http_module modules/mod_proxy_http.so
+LoadModule dir_module modules/mod_dir.so
+LoadModule mime_module modules/mod_mime.so
+LoadModule rewrite_module modules/mod_rewrite.so
+
+ServerName {{ ansible_hostname }}
+DocumentRoot "/usr/local/apache2/htdocs"
+
+<Directory "/usr/local/apache2/htdocs">
+    Options Indexes FollowSymLinks
+    AllowOverride None
+    Require all granted
+</Directory>
+
+# Proxy pour l'API
+ProxyPass /api http://app:8080/api
+ProxyPassReverse /api http://app:8080/api
+
+# Pour le frontend, Apache sert les fichiers statiques directement
+# (ils seront copiés dans htdocs)

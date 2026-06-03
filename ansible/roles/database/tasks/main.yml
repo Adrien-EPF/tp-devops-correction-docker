@@ -1,0 +1,20 @@
+---
+- name: Create .env file for database
+  template:
+    src: db.env.j2
+    dest: /opt/db.env
+    owner: root
+    group: root
+    mode: 0600
+
+- name: Launch PostgreSQL container
+  docker_container:
+    name: db
+    image: greenway13/tp-devops-database:latest
+    state: started
+    restart_policy: always
+    env_file: /opt/db.env
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - name: app_network
