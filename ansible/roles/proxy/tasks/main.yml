@@ -2,7 +2,7 @@
 - name: Launch httpd container
   docker_container:
     name: my-httpd-container
-    image: greenway13/new-httpd:1.0
+    image: greenway13/tp-devops-httpd:latest
     networks:
       - name: front-network
     ports:
