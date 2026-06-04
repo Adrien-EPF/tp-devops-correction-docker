@@ -3,6 +3,7 @@
   docker_container:
     name: my-db-container
     image: greenway13/tp-devops-database:latest
+    pull: true
     networks:
       - name: private-network
     volumes:

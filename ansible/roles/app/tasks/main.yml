@@ -3,6 +3,7 @@
   docker_container:
     name: my-backend-container
     image: greenway13/tp-devops-simple-api:latest
+    pull: true
     networks:
       - name: private-network
       - name: front-network
